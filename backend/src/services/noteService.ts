@@ -213,3 +213,49 @@ export async function unarchiveNote(noteId: number, userId: number) {
   }
   return unarchived;
 }
+
+export async function pinNote(noteId: number, userId: number) {
+  const existing = await noteRepository.findNoteByIdAndUserId(noteId, userId);
+  if (!existing) {
+    const err = new Error('Note tidak ditemukan atau bukan milik Anda');
+    (err as any).status = 404;
+    throw err;
+  }
+
+  if (existing.is_pinned) {
+    const err = new Error('Note sudah di-pin');
+    (err as any).status = 400;
+    throw err;
+  }
+
+  const pinned = await noteRepository.pinNoteById(noteId, userId);
+  if (!pinned) {
+    const err = new Error('Gagal pin note');
+    (err as any).status = 500;
+    throw err;
+  }
+  return pinned;
+}
+
+export async function unpinNote(noteId: number, userId: number) {
+  const existing = await noteRepository.findNoteByIdAndUserId(noteId, userId);
+  if (!existing) {
+    const err = new Error('Note tidak ditemukan atau bukan milik Anda');
+    (err as any).status = 404;
+    throw err;
+  }
+
+  if (!existing.is_pinned) {
+    const err = new Error('Note belum di-pin');
+    (err as any).status = 400;
+    throw err;
+  }
+
+  const unpinned = await noteRepository.unpinNoteById(noteId, userId);
+  if (!unpinned) {
+    const err = new Error('Gagal unpin note');
+    (err as any).status = 500;
+    throw err;
+  }
+  return unpinned;
+}

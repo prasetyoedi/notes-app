@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import {
   Plus, Search, Filter, Calendar, X,
-  Archive, RotateCcw, Trash2, Edit3, FileText, Tag
+  Archive, RotateCcw, Trash2, Edit3, FileText, Tag, Pin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,7 @@ interface Note {
   created_at: string;
   updated_at: string;
   is_archived: boolean;
+  is_pinned: boolean;
 }
 
 export default function DashboardPage() {
@@ -116,6 +117,26 @@ export default function DashboardPage() {
       refetchNotes();
     } catch (err: any) {
       toast.error(err.message || 'Gagal mengembalikan catatan');
+    }
+  };
+
+  const handlePin = async (id: number) => {
+    try {
+      await fetchData(`/notes/${id}/pin`, { method: 'PUT' });
+      toast.success('Catatan di-pin');
+      refetchNotes();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal pin catatan');
+    }
+  };
+
+  const handleUnpin = async (id: number) => {
+    try {
+      await fetchData(`/notes/${id}/unpin`, { method: 'PUT' });
+      toast.success('Catatan di-unpin');
+      refetchNotes();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal unpin catatan');
     }
   };
 
@@ -332,7 +353,7 @@ export default function DashboardPage() {
               className="text-zinc-600"
             >
               <Filter className="mr-1.5 h-4 w-4" />
-              Filter Tanggal
+              Filter Lanjutan
             </Button>
           </div>
         </div>
@@ -399,6 +420,9 @@ export default function DashboardPage() {
                   <CardTitle className="text-base font-semibold text-zinc-900 line-clamp-2 group-hover:text-indigo-600 transition-colors leading-snug">
                     {note.title}
                   </CardTitle>
+                  {note.is_pinned && (
+                    <Pin className="h-4 w-4 text-purple-500 fill-purple-500 shrink-0 mt-1" />
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {note.tags.length === 0 ? (
@@ -415,12 +439,6 @@ export default function DashboardPage() {
                     ))
                   )}
                 </div>
-                {note.is_archived && (
-                  <Badge variant="outline" className="mt-2 w-fit text-zinc-600 border-zinc-200 bg-zinc-50 text-xs">
-                    <Archive className="mr-1 h-3 w-3" />
-                    Diarsipkan
-                  </Badge>
-                )}
               </CardHeader>
 
               <CardContent className="flex-1 pb-4">
@@ -432,14 +450,49 @@ export default function DashboardPage() {
               </CardContent>
 
               <CardFooter className="flex flex-wrap justify-between items-center border-t border-zinc-100 pt-4 text-xs text-zinc-500 gap-3 bg-zinc-50/30">
-                <span className="flex items-center gap-1.5 font-medium">
+                <span className="flex items-center gap-1.5 font-medium flex-wrap">
                   <Calendar className="h-3.5 w-3.5 text-zinc-400" />
                   {format(new Date(note.created_at), 'dd MMM yyyy', { locale: id })}
+
+                  <div className="flex gap-1.5">
+                    {note.is_archived && (
+                      <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-[10px] px-1.5 py-0">
+                        <Archive className="mr-1 h-3 w-3" /> Arsip
+                      </Badge>
+                    )}
+                    {note.is_pinned && (
+                      <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50 text-[10px] px-1.5 py-0">
+                        <Pin className="mr-1 h-3 w-3" /> Dipin
+                      </Badge>
+                    )}
+                  </div>
                 </span>
 
                 <div className="flex items-center gap-1 opacity-100">
                   {!note.is_archived ? (
                     <>
+                      {!note.is_pinned ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handlePin(note.id)}
+                          className="h-8 w-8 text-zinc-500 hover:text-purple-600 hover:bg-purple-50"
+                          title="Pin catatan"
+                        >
+                          <Pin className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleUnpin(note.id)}
+                          className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
+                          title="Unpin catatan"
+                        >
+                          <Pin className="h-4 w-4 fill-purple-600" />
+                        </Button>
+                      )}
+
                       <Button
                         variant="ghost"
                         size="icon"

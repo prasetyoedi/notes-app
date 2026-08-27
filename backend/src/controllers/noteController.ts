@@ -157,3 +157,49 @@ export async function unarchiveNote(req: Request, res: Response, next: NextFunct
     next(error);
   }
 }
+
+export async function pinNote(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+    const noteId = parseInt(id as string, 10);
+    if (isNaN(noteId)) {
+      return res.status(400).json({
+        status: 'Error',
+        message: 'ID note tidak valid',
+      });
+    }
+
+    const pinned = await noteService.pinNote(noteId, userId);
+    res.status(200).json({
+      status: 'Success',
+      message: 'Note berhasil di-pin',
+      data: pinned,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function unpinNote(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+    const noteId = parseInt(id as string, 10);
+    if (isNaN(noteId)) {
+      return res.status(400).json({
+        status: 'Error',
+        message: 'ID note tidak valid',
+      });
+    }
+
+    const unpinned = await noteService.unpinNote(noteId, userId);
+    res.status(200).json({
+      status: 'Success',
+      message: 'Note berhasil di-unpin',
+      data: unpinned,
+    });
+  } catch (error) {
+    next(error);
+  }
+}

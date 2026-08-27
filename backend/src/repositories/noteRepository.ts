@@ -6,6 +6,7 @@ export interface Note {
   content: string | null;
   user_id: number;
   is_archived: boolean;
+  is_pinned: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -55,6 +56,7 @@ export async function findAllNotesWithPagination(params: FindAllParams): Promise
       n.created_at,
       n.updated_at,
       n.is_archived,
+      n.is_pinned,
       COALESCE(
         JSON_AGG(
           JSON_BUILD_OBJECT('id', t.id, 'name', t.name)
@@ -99,7 +101,7 @@ export async function findAllNotesWithPagination(params: FindAllParams): Promise
 
   baseQuery += `
     GROUP BY n.id
-    ORDER BY n.created_at DESC
+    ORDER BY n.is_pinned DESC, n.created_at DESC
     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
   `;
   values.push(limit, offset);
@@ -117,6 +119,7 @@ export async function findNoteByIdAndUserId(id: number, userId: number): Promise
       n.created_at,
       n.updated_at,
       n.is_archived,
+      n.is_pinned,
       COALESCE(
         JSON_AGG(
           JSON_BUILD_OBJECT('id', t.id, 'name', t.name)
@@ -167,6 +170,28 @@ export async function unarchiveNoteById(id: number, userId: number): Promise<Not
     SET is_archived = false, updated_at = NOW()
     WHERE id = $1 AND user_id = $2
     RETURNING id, title, content, user_id, is_archived, created_at, updated_at
+  `;
+  const { rows } = await pool.query(query, [id, userId]);
+  return rows[0] || null;
+}
+
+export async function pinNoteById(id: number, userId: number): Promise<Note | null> {
+  const query = `
+    UPDATE notes
+    SET is_pinned = true, updated_at = NOW()
+    WHERE id = $1 AND user_id = $2
+    RETURNING id, title, content, user_id, is_archived, is_pinned, created_at, updated_at
+  `;
+  const { rows } = await pool.query(query, [id, userId]);
+  return rows[0] || null;
+}
+
+export async function unpinNoteById(id: number, userId: number): Promise<Note | null> {
+  const query = `
+    UPDATE notes
+    SET is_pinned = false, updated_at = NOW()
+    WHERE id = $1 AND user_id = $2
+    RETURNING id, title, content, user_id, is_archived, is_pinned, created_at, updated_at
   `;
   const { rows } = await pool.query(query, [id, userId]);
   return rows[0] || null;

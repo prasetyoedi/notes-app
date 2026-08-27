@@ -197,4 +197,7 @@ router.put('/:id/archive', authenticate, noteController.archiveNote);
  */
 router.put('/:id/unarchive', authenticate, noteController.unarchiveNote);
 
+router.put('/:id/pin', authenticate, noteController.pinNote);
+router.put('/:id/unpin', authenticate, noteController.unpinNote);
+
 export default router;
