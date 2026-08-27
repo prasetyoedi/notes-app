@@ -155,4 +155,46 @@ router.put('/:id', authenticate, noteController.updateNote);
  */
 router.delete('/:id', authenticate, noteController.deleteNote);
 
+// Tambahkan di bawah route delete
+
+/**
+ * @swagger
+ * /notes/{id}/archive:
+ *   put:
+ *     summary: Arsipkan note
+ *     tags: [Notes]
+ *     security:
+ *       - Bearer: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Note berhasil diarsipkan
+ */
+router.put('/:id/archive', authenticate, noteController.archiveNote);
+
+/**
+ * @swagger
+ * /notes/{id}/unarchive:
+ *   put:
+ *     summary: Kembalikan note dari arsip
+ *     tags: [Notes]
+ *     security:
+ *       - Bearer: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Note berhasil dikembalikan
+ */
+router.put('/:id/unarchive', authenticate, noteController.unarchiveNote);
+
 export default router;

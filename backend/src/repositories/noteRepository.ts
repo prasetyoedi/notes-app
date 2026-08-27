@@ -5,6 +5,7 @@ export interface Note {
   title: string;
   content: string | null;
   user_id: number;
+  is_archived: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -17,7 +18,7 @@ export async function createNote(title: string, content: string | null, userId: 
   const query = `
     INSERT INTO notes (title, content, user_id)
     VALUES ($1, $2, $3)
-    RETURNING id, title, content, user_id, created_at, updated_at
+    RETURNING id, title, content, user_id, is_archived, created_at, updated_at
   `;
   const { rows } = await pool.query(query, [title, content, userId]);
   return rows[0];
@@ -31,10 +32,20 @@ interface FindAllParams {
   tagIds?: number[];
   startDate?: string | null;
   endDate?: string | null;
+  archived?: boolean; 
 }
 
 export async function findAllNotesWithPagination(params: FindAllParams): Promise<NoteWithTags[]> {
-  const { userId, limit, offset, search = '', tagIds = [], startDate, endDate } = params;
+  const {
+    userId,
+    limit,
+    offset,
+    search = '',
+    tagIds = [],
+    startDate,
+    endDate,
+    archived = false,
+  } = params;
 
   let baseQuery = `
     SELECT
@@ -43,6 +54,7 @@ export async function findAllNotesWithPagination(params: FindAllParams): Promise
       n.content,
       n.created_at,
       n.updated_at,
+      n.is_archived,
       COALESCE(
         JSON_AGG(
           JSON_BUILD_OBJECT('id', t.id, 'name', t.name)
@@ -53,10 +65,11 @@ export async function findAllNotesWithPagination(params: FindAllParams): Promise
     LEFT JOIN notes_tags nt ON n.id = nt.note_id
     LEFT JOIN tags t ON nt.tag_id = t.id
     WHERE n.user_id = $1
+    AND n.is_archived = $2
   `;
 
-  const values: any[] = [userId];
-  let paramIndex = 2;
+  const values: any[] = [userId, archived];
+  let paramIndex = 3;
 
   if (search) {
     baseQuery += ` AND (n.title ILIKE $${paramIndex} OR n.content ILIKE $${paramIndex})`;
@@ -103,6 +116,7 @@ export async function findNoteByIdAndUserId(id: number, userId: number): Promise
       n.content,
       n.created_at,
       n.updated_at,
+      n.is_archived,
       COALESCE(
         JSON_AGG(
           JSON_BUILD_OBJECT('id', t.id, 'name', t.name)
@@ -124,7 +138,7 @@ export async function updateNoteById(id: number, userId: number, title: string, 
     UPDATE notes
     SET title = $1, content = $2, updated_at = NOW()
     WHERE id = $3 AND user_id = $4
-    RETURNING id, title, content, user_id, created_at, updated_at
+    RETURNING id, title, content, user_id, is_archived, created_at, updated_at
   `;
   const { rows } = await pool.query(query, [title, content, id, userId]);
   return rows[0] || null;
@@ -132,6 +146,28 @@ export async function updateNoteById(id: number, userId: number, title: string, 
 
 export async function deleteNoteById(id: number, userId: number): Promise<{ id: number } | null> {
   const query = `DELETE FROM notes WHERE id = $1 AND user_id = $2 RETURNING id`;
+  const { rows } = await pool.query(query, [id, userId]);
+  return rows[0] || null;
+}
+
+export async function archiveNoteById(id: number, userId: number): Promise<Note | null> {
+  const query = `
+    UPDATE notes
+    SET is_archived = true, updated_at = NOW()
+    WHERE id = $1 AND user_id = $2
+    RETURNING id, title, content, user_id, is_archived, created_at, updated_at
+  `;
+  const { rows } = await pool.query(query, [id, userId]);
+  return rows[0] || null;
+}
+
+export async function unarchiveNoteById(id: number, userId: number): Promise<Note | null> {
+  const query = `
+    UPDATE notes
+    SET is_archived = false, updated_at = NOW()
+    WHERE id = $1 AND user_id = $2
+    RETURNING id, title, content, user_id, is_archived, created_at, updated_at
+  `;
   const { rows } = await pool.query(query, [id, userId]);
   return rows[0] || null;
 }

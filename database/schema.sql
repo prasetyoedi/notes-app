@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS notes (
     title VARCHAR(255) NOT NULL,
     content TEXT,
     user_id INTEGER NOT NULL,
+    is_archived BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT fk_notes__users__user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

@@ -21,6 +21,7 @@ export interface Note {
   user_id: number;
   created_at: Date;
   updated_at: Date;
+  is_archived: boolean;
 }
 
 export interface NoteWithTags extends Note {

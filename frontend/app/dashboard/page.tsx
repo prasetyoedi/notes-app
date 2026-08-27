@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Plus, Search, Filter, Calendar, X } from 'lucide-react';
+import {
+  Plus, Search, Filter, Calendar, X,
+  Archive, RotateCcw, Trash2, Edit3, FileText, Tag
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,15 +38,17 @@ interface Note {
   tags: Tag[];
   created_at: string;
   updated_at: string;
+  is_archived: boolean;
 }
 
 export default function DashboardPage() {
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(6);
+  const [limit, setLimit] = useState(3);
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState<string>('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -55,7 +60,7 @@ export default function DashboardPage() {
     error,
     refetch: refetchNotes,
   } = useQuery({
-    queryKey: ['notes', page, limit, search, tagFilter, startDate, endDate],
+    queryKey: ['notes', page, limit, search, tagFilter, startDate, endDate, showArchived],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('limit', limit.toString());
@@ -64,6 +69,7 @@ export default function DashboardPage() {
       if (tagFilter) params.append('tags', tagFilter);
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
+      params.append('isArchived', String(showArchived));
 
       const result = await fetchData<Note[]>(`/notes?${params.toString()}`);
       return result;
@@ -83,18 +89,38 @@ export default function DashboardPage() {
   });
 
   const handleDeleteNote = async (id: number) => {
-    if (!confirm('Yakin ingin menghapus note ini?')) return;
+    if (!confirm('Yakin ingin menghapus catatan ini secara permanen?')) return;
     try {
       await fetchData(`/notes/${id}`, { method: 'DELETE' });
-      toast.success('Note berhasil dihapus');
+      toast.success('Catatan berhasil dihapus');
       refetchNotes();
     } catch (err) {
-      toast.error('Gagal menghapus note');
+      toast.error('Gagal menghapus catatan');
+    }
+  };
+
+  const handleArchive = async (id: number) => {
+    try {
+      await fetchData(`/notes/${id}/archive`, { method: 'PUT' });
+      toast.success('Catatan diarsipkan');
+      refetchNotes();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengarsipkan catatan');
+    }
+  };
+
+  const handleUnarchive = async (id: number) => {
+    try {
+      await fetchData(`/notes/${id}/unarchive`, { method: 'PUT' });
+      toast.success('Catatan dikembalikan');
+      refetchNotes();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengembalikan catatan');
     }
   };
 
   const handleDeleteTag = async (id: number) => {
-    if (!confirm('Hapus tag ini? Semua relasi ke notes akan dihapus.')) return;
+    if (!confirm('Hapus tag ini? Semua relasi ke catatan akan dihapus.')) return;
     try {
       await fetchData(`/tags/${id}`, { method: 'DELETE' });
       toast.success('Tag berhasil dihapus');
@@ -123,32 +149,41 @@ export default function DashboardPage() {
     setPage(1);
   };
 
+  const toggleArchive = () => {
+    setShowArchived(!showArchived);
+    setPage(1);
+  };
+
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="min-h-screen bg-zinc-50/50 p-4 md:p-8 space-y-8">
         <div className="flex justify-between items-center">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-10 w-28" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-72" />
+          </div>
+          <Skeleton className="h-10 w-32" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="overflow-hidden">
+            <Card key={i} className="overflow-hidden border-zinc-200">
               <CardHeader className="pb-3">
                 <Skeleton className="h-6 w-3/4" />
-                <div className="flex gap-1 mt-2">
-                  <Skeleton className="h-5 w-12" />
-                  <Skeleton className="h-5 w-12" />
+                <div className="flex gap-1.5 mt-2">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-2">
                 <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-2/3 mt-2" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
               </CardContent>
-              <CardFooter className="border-t pt-3 flex justify-between">
-                <Skeleton className="h-4 w-20" />
+              <CardFooter className="border-t border-zinc-100 pt-4 flex justify-between">
+                <Skeleton className="h-4 w-24" />
                 <div className="flex gap-2">
-                  <Skeleton className="h-8 w-16" />
-                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
                 </div>
               </CardFooter>
             </Card>
@@ -160,15 +195,15 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="rounded-full bg-red-100 p-3">
+      <div className="min-h-screen bg-zinc-50/50 flex flex-col items-center justify-center p-4 text-center">
+        <div className="rounded-full bg-red-50 p-4 mb-4 ring-1 ring-red-100">
           <X className="h-8 w-8 text-red-600" />
         </div>
-        <h3 className="mt-4 text-lg font-semibold">Gagal memuat data</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          {(error as Error).message}
+        <h3 className="text-xl font-semibold text-zinc-900">Gagal memuat data</h3>
+        <p className="text-sm text-zinc-500 mt-2 max-w-sm">
+          {(error as Error).message || 'Terjadi kesalahan saat mengambil data dari server.'}
         </p>
-        <Button variant="outline" className="mt-4" onClick={() => refetchNotes()}>
+        <Button variant="outline" className="mt-6 border-zinc-300" onClick={() => refetchNotes()}>
           Coba lagi
         </Button>
       </div>
@@ -176,203 +211,285 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        {/* <div>
-          <h2 className="text-2xl font-bold tracking-tight">📝 Semua Notes</h2>
-          <p className="text-sm text-muted-foreground">
-            Kelola catatan Anda dengan mudah
+    <div className="min-h-screen bg-zinc-50/50 p-4 md:p-8 space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 flex items-center gap-2">
+            {showArchived ? <Archive className="h-7 w-7 text-zinc-500" /> : <FileText className="h-7 w-7 text-indigo-600" />}
+            {showArchived ? 'Arsip Catatan' : 'Catatan Saya'}
+          </h1>
+          <p className="text-zinc-500 text-sm">
+            {showArchived
+              ? 'Kelola catatan yang telah Anda arsipkan.'
+              : 'Kelola, atur, dan temukan catatan Anda dengan mudah.'}
           </p>
-        </div> */}
+        </div>
+
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             onClick={() => setIsTagManagementOpen(true)}
-            className="border-slate-200/80 bg-white/70 backdrop-blur-sm"
+            className="border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 shadow-sm"
           >
-            🏷️ Kelola Tag
+            <Tag className="mr-2 h-4 w-4" />
+            Kelola Tag
           </Button>
           <Button
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all"
+            className="bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Buat Note
+            Buat Catatan
           </Button>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-50">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Cari judul atau konten..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-white/70 backdrop-blur-sm border-slate-200/80 focus-visible:ring-blue-500"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm space-y-4">
+        <div className="flex flex-col lg:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+            <Input
+              placeholder="Cari judul atau konten..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 border-zinc-200 focus-visible:ring-indigo-500/20 focus-visible:border-indigo-500 transition-all"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
 
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setIsFilterOpen(!isFilterOpen)}
-          className="shrink-0 border-slate-200/80 bg-white/70 backdrop-blur-sm"
-        >
-          <Filter className="h-4 w-4" />
-        </Button>
-
-        {isTagsLoading ? (
-          <Skeleton className="h-10 w-24" />
-        ) : (
-          <Select value={tagFilter} onValueChange={(v) => setTagFilter(v || '')}>
-            <SelectTrigger className="w-45 bg-white/70 backdrop-blur-sm border-slate-200/80">
-              <SelectValue>
-                {tagFilter ? (
-                  <span className="flex items-center gap-1">
-                    <span className="text-blue-600">#</span>
-                    {tags?.find((t) => String(t.id) === tagFilter)?.name || 'Filter Tag'}
-                  </span>
+          {isTagsLoading ? (
+            <Skeleton className="h-10 w-40" />
+          ) : (
+            <Select value={tagFilter} onValueChange={(v) => setTagFilter(v || '')}>
+              <SelectTrigger className="w-full lg:w-48 border-zinc-200 bg-white focus:ring-indigo-500/20">
+                <SelectValue>
+                  {tagFilter ? (
+                    <span className="flex items-center gap-1.5 text-indigo-700 font-medium">
+                      <Tag className="h-3.5 w-3.5" />
+                      {tags?.find((t) => String(t.id) === tagFilter)?.name}
+                    </span>
+                  ) : (
+                    <span className="text-zinc-500">Semua Tag</span>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua Tag</SelectItem>
+                {tags && tags.length > 0 ? (
+                  tags.map((tag) => (
+                    <SelectItem key={tag.id} value={String(tag.id)}>
+                      <span className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                        {tag.name}
+                      </span>
+                    </SelectItem>
+                  ))
                 ) : (
-                  <span className="text-muted-foreground">Filter Tag</span>
+                  <div className="px-2 py-3 text-sm text-zinc-500 text-center">
+                    Belum ada tag
+                  </div>
                 )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua Tag</SelectItem>
-              {tags && tags.length > 0 ? (
-                tags.map((tag) => (
-                  <SelectItem key={tag.id} value={String(tag.id)}>
-                    #{tag.name}
-                  </SelectItem>
-                ))
-              ) : (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground cursor-default">
-                  Belum ada tag. Buat di "Kelola Tag"
-                </div>
-              )}
-            </SelectContent>
-          </Select>
-        )}
+              </SelectContent>
+            </Select>
+          )}
 
-        {(tagFilter || startDate || endDate) && (
           <Button
-            variant="ghost"
+            variant={showArchived ? 'default' : 'outline'}
             size="sm"
-            onClick={clearFilters}
-            className="text-muted-foreground hover:text-foreground"
+            onClick={toggleArchive}
+            className={`lg:w-auto transition-all ${showArchived
+              ? 'bg-zinc-800 text-white hover:bg-zinc-900'
+              : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+              }`}
           >
-            <X className="mr-1 h-3 w-3" />
-            Reset filter
+            {showArchived ? <RotateCcw className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}
+            {showArchived ? 'Tampilkan Aktif' : 'Lihat Arsip'}
           </Button>
-        )}
-      </div>
 
-      {isFilterOpen && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-lg border bg-white/70 backdrop-blur-sm shadow-sm animate-in slide-in-from-top-2">
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="pl-9 bg-white/50 border-slate-200/80"
-              placeholder="Mulai"
-            />
-          </div>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="pl-9 bg-white/50 border-slate-200/80"
-              placeholder="Sampai"
-            />
+          <div className="flex items-center gap-2 ml-auto">
+            {(tagFilter || startDate || endDate) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="text-zinc-500 hover:text-red-600 hover:bg-red-50"
+              >
+                <X className="mr-1.5 h-3.5 w-3.5" />
+                Reset
+              </Button>
+            )}
+            <Button
+              variant={isFilterOpen ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="text-zinc-600"
+            >
+              <Filter className="mr-1.5 h-4 w-4" />
+              Filter Tanggal
+            </Button>
           </div>
         </div>
-      )}
+
+        {isFilterOpen && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-100 animate-in slide-in-from-top-2 fade-in duration-200">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Tanggal Mulai</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="pl-9 border-zinc-200 focus-visible:ring-indigo-500/20"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Tanggal Akhir</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="pl-9 border-zinc-200 focus-visible:ring-indigo-500/20"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {notes?.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center border rounded-lg bg-white/50 backdrop-blur-sm">
-          <div className="rounded-full bg-slate-100 p-4 mb-4">
-            <span className="text-4xl">📭</span>
+        <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-zinc-200 rounded-2xl bg-zinc-50/50">
+          <div className="rounded-full bg-zinc-100 p-4 mb-4">
+            {showArchived ? <Archive className="h-8 w-8 text-zinc-400" /> : <FileText className="h-8 w-8 text-zinc-400" />}
           </div>
-          <h3 className="text-lg font-semibold">Belum ada note</h3>
-          <p className="text-sm text-muted-foreground max-w-sm mt-1">
-            Mulai buat catatan pertama Anda dengan klik tombol &quot;Buat Note&quot; di atas.
+          <h3 className="text-lg font-semibold text-zinc-900">
+            {showArchived ? 'Belum ada catatan di arsip' : 'Belum ada catatan'}
+          </h3>
+          <p className="text-sm text-zinc-500 max-w-sm mt-2 mb-6">
+            {showArchived
+              ? 'Catatan yang Anda arsipkan akan muncul di sini agar tidak mengganggu tampilan utama.'
+              : 'Mulai buat catatan pertama Anda dengan mengklik tombol "Buat Catatan" di atas.'}
           </p>
+          {!showArchived && (
+            <Button onClick={() => setIsCreateModalOpen(true)} variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+              <Plus className="mr-2 h-4 w-4" />
+              Buat Catatan Sekarang
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {notes?.map((note) => (
             <Card
               key={note.id}
-              className="group flex flex-col overflow-hidden border-slate-200/80 bg-white/70 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-100/50 hover:border-blue-200/50 transition-all duration-300"
+              className="group flex flex-col overflow-hidden border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-indigo-200/60 transition-all duration-300"
             >
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-semibold line-clamp-1 group-hover:text-blue-600 transition-colors">
-                  {note.title}
-                </CardTitle>
-                <div className="flex flex-wrap gap-1 mt-1">
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start gap-2">
+                  <CardTitle className="text-base font-semibold text-zinc-900 line-clamp-2 group-hover:text-indigo-600 transition-colors leading-snug">
+                    {note.title}
+                  </CardTitle>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-2">
                   {note.tags.length === 0 ? (
-                    <span className="text-xs text-muted-foreground/60">
-                      Tanpa tag
-                    </span>
+                    <span className="text-xs text-zinc-400 italic">Tanpa tag</span>
                   ) : (
                     note.tags.map((tag) => (
                       <Badge
                         key={tag.id}
                         variant="secondary"
-                        className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-0 text-xs font-normal"
+                        className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-0 text-xs font-medium px-2 py-0.5"
                       >
-                        #{tag.name}
+                        {tag.name}
                       </Badge>
                     ))
                   )}
                 </div>
+                {note.is_archived && (
+                  <Badge variant="outline" className="mt-2 w-fit text-zinc-600 border-zinc-200 bg-zinc-50 text-xs">
+                    <Archive className="mr-1 h-3 w-3" />
+                    Diarsipkan
+                  </Badge>
+                )}
               </CardHeader>
 
-              <CardContent className="flex-1 pb-2">
-                <p className="text-sm text-muted-foreground line-clamp-3">
+              <CardContent className="flex-1 pb-4">
+                <p className="text-sm text-zinc-600 line-clamp-3 leading-relaxed">
                   {note.content || (
-                    <span className="italic text-muted-foreground/50">
-                      (Konten kosong)
-                    </span>
+                    <span className="italic text-zinc-400">Tidak ada konten...</span>
                   )}
                 </p>
               </CardContent>
 
-              <CardFooter className="flex flex-wrap justify-between items-center border-t border-slate-100/80 pt-3 text-xs text-muted-foreground gap-2">
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400" />
+              <CardFooter className="flex flex-wrap justify-between items-center border-t border-zinc-100 pt-4 text-xs text-zinc-500 gap-3 bg-zinc-50/30">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Calendar className="h-3.5 w-3.5 text-zinc-400" />
                   {format(new Date(note.created_at), 'dd MMM yyyy', { locale: id })}
                 </span>
-                <div className="flex gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingNote(note)}
-                    className="h-8 px-3 text-xs bg-orange-50 text-orange-400"
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteNote(note.id)}
-                    className="h-8 px-3 text-xs bg-red-50 text-red-600"
-                  >
-                    Hapus
-                  </Button>
+
+                <div className="flex items-center gap-1 opacity-100">
+                  {!note.is_archived ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleArchive(note.id)}
+                        className="h-8 w-8 text-zinc-500 hover:text-amber-600 hover:bg-amber-50"
+                        title="Arsipkan"
+                      >
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEditingNote(note)}
+                        className="h-8 w-8 text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50"
+                        title="Edit"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteNote(note.id)}
+                        className="h-8 w-8 text-zinc-500 hover:text-red-600 hover:bg-red-50"
+                        title="Hapus"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleUnarchive(note.id)}
+                        className="h-8 w-8 text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50"
+                        title="Kembalikan"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteNote(note.id)}
+                        className="h-8 w-8 text-zinc-500 hover:text-red-600 hover:bg-red-50"
+                        title="Hapus Permanen"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardFooter>
             </Card>
@@ -381,18 +498,19 @@ export default function DashboardPage() {
       )}
 
       {notes && notes.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
-          <div className="flex items-center gap-3 order-2 sm:order-1">
-            <p className="text-sm text-muted-foreground">
-              Halaman <span className="font-medium text-foreground">{page}</span>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-zinc-200">
+          <div className="flex items-center gap-4 order-2 sm:order-1">
+            <p className="text-sm text-zinc-500">
+              Halaman <span className="font-semibold text-zinc-900">{page}</span>
             </p>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Tampil:</span>
+              <span className="text-sm text-zinc-500">Tampil:</span>
               <Select value={String(limit)} onValueChange={handleLimitChange}>
-                <SelectTrigger className="w-20 h-8 text-sm bg-white/50 border-slate-200/80">
+                <SelectTrigger className="w-20 h-8 text-sm border-zinc-200 bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="3">3</SelectItem>
                   <SelectItem value="6">6</SelectItem>
                   <SelectItem value="12">12</SelectItem>
                   <SelectItem value="24">24</SelectItem>
@@ -408,7 +526,7 @@ export default function DashboardPage() {
               size="sm"
               disabled={page === 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="border-slate-200/80 hover:bg-slate-50 flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none border-zinc-200 text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
             >
               Sebelumnya
             </Button>
@@ -417,7 +535,7 @@ export default function DashboardPage() {
               size="sm"
               disabled={!notes || notes.length < limit}
               onClick={() => setPage((p) => p + 1)}
-              className="border-slate-200/80 hover:bg-slate-50 flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none border-zinc-200 text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
             >
               Selanjutnya
             </Button>

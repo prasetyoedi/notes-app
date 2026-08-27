@@ -37,15 +37,25 @@ export async function createNote(
 }
 
 export async function getNotes(userId: number, queryParams: any) {
-  const { limit = 10, page = 1, search = '', tags = [], startDate, endDate } = queryParams;
+  const {
+    limit = 10,
+    page = 1,
+    search = '',
+    tags = [],
+    startDate,
+    endDate,
+    isArchived = 'false',
+  } = queryParams;
+
   const offset = (page - 1) * limit;
+  const archived = isArchived === 'true';
 
   let tagIds: number[] = [];
   if (tags) {
     if (Array.isArray(tags)) {
-      tagIds = tags.map(id => parseInt(id)).filter(id => !isNaN(id));
+      tagIds = tags.map((id: string) => parseInt(id)).filter((id: number) => !isNaN(id));
     } else if (typeof tags === 'string') {
-      tagIds = tags.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+      tagIds = tags.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
     }
   }
 
@@ -69,8 +79,9 @@ export async function getNotes(userId: number, queryParams: any) {
     offset,
     search,
     tagIds,
-    startDate,
-    endDate,
+    startDate: startDate || null,
+    endDate: endDate || null,
+    archived
   });
 
   return notes;
@@ -154,4 +165,51 @@ export async function deleteNote(noteId: number, userId: number) {
     throw err;
   }
   return { id: deleted.id };
+}
+
+// ARCHIVE
+export async function archiveNote(noteId: number, userId: number) {
+  const existing = await noteRepository.findNoteByIdAndUserId(noteId, userId);
+  if (!existing) {
+    const err = new Error('Note tidak ditemukan atau bukan milik Anda');
+    (err as any).status = 404;
+    throw err;
+  }
+
+  if (existing.is_archived) {
+    const err = new Error('Note sudah diarsipkan');
+    (err as any).status = 400;
+    throw err;
+  }
+
+  const archived = await noteRepository.archiveNoteById(noteId, userId);
+  if (!archived) {
+    const err = new Error('Gagal mengarsipkan note');
+    (err as any).status = 500;
+    throw err;
+  }
+  return archived;
+}
+
+export async function unarchiveNote(noteId: number, userId: number) {
+  const existing = await noteRepository.findNoteByIdAndUserId(noteId, userId);
+  if (!existing) {
+    const err = new Error('Note tidak ditemukan atau bukan milik Anda');
+    (err as any).status = 404;
+    throw err;
+  }
+
+  if (!existing.is_archived) {
+    const err = new Error('Note belum diarsipkan');
+    (err as any).status = 400;
+    throw err;
+  }
+
+  const unarchived = await noteRepository.unarchiveNoteById(noteId, userId);
+  if (!unarchived) {
+    const err = new Error('Gagal mengembalikan note');
+    (err as any).status = 500;
+    throw err;
+  }
+  return unarchived;
 }
