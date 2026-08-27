@@ -353,7 +353,7 @@ export default function DashboardPage() {
               className="text-zinc-600"
             >
               <Filter className="mr-1.5 h-4 w-4" />
-              Filter Lanjutan
+              Filter Tanggal
             </Button>
           </div>
         </div>
@@ -420,9 +420,6 @@ export default function DashboardPage() {
                   <CardTitle className="text-base font-semibold text-zinc-900 line-clamp-2 group-hover:text-indigo-600 transition-colors leading-snug">
                     {note.title}
                   </CardTitle>
-                  {note.is_pinned && (
-                    <Pin className="h-4 w-4 text-purple-500 fill-purple-500 shrink-0 mt-1" />
-                  )}
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {note.tags.length === 0 ? (
@@ -458,11 +455,6 @@ export default function DashboardPage() {
                     {note.is_archived && (
                       <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-[10px] px-1.5 py-0">
                         <Archive className="mr-1 h-3 w-3" /> Arsip
-                      </Badge>
-                    )}
-                    {note.is_pinned && (
-                      <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50 text-[10px] px-1.5 py-0">
-                        <Pin className="mr-1 h-3 w-3" /> Dipin
                       </Badge>
                     )}
                   </div>
@@ -567,7 +559,6 @@ export default function DashboardPage() {
                   <SelectItem value="6">6</SelectItem>
                   <SelectItem value="12">12</SelectItem>
                   <SelectItem value="24">24</SelectItem>
-                  <SelectItem value="48">48</SelectItem>
                 </SelectContent>
               </Select>
             </div>
